@@ -230,6 +230,20 @@ function reducer(state, action) {
         activePage: 'dashboard',
       }
 
+    // Clear all user data (keep categories/tags/settings)
+    case 'CLEAR_DATA':
+      return {
+        ...INITIAL_STATE,
+        categories: state.categories,
+        tags: state.tags,
+        settings: state.settings,
+        transactions: [],
+        scheduled: [],
+        ledger: [],
+        budgets: { overall: 0, categories: {} },
+        activePage: 'dashboard',
+      }
+
     default:
       return state
   }
@@ -344,6 +358,31 @@ export function AppProvider({ children }) {
   const updateSettings = (data) => dispatch({ type: 'UPDATE_SETTINGS', payload: data })
   const setPage = (page) => dispatch({ type: 'SET_PAGE', payload: page })
 
+  const clearAllData = async () => {
+    dispatch({ type: 'CLEAR_DATA' })
+    localStorage.removeItem('mudra_state')
+    if (user) {
+      try {
+        const clearedState = {
+          transactions: [],
+          scheduled: [],
+          ledger: [],
+          budgets: { overall: 0, categories: {} },
+          categories: DEFAULT_CATEGORIES,
+          tags: DEFAULT_TAGS,
+          settings: state.settings,
+        }
+        await supabase.from('user_data').upsert({
+          user_id: user.id,
+          data: clearedState,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+      } catch (err) {
+        console.error('[Mudra] Clear cloud data error:', err)
+      }
+    }
+  }
+
   const value = {
     ...state,
     syncStatus,
@@ -366,6 +405,7 @@ export function AppProvider({ children }) {
     deleteTag,
     updateSettings,
     setPage,
+    clearAllData,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

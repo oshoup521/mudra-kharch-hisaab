@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext.jsx'
 import { useAuth } from '../../context/AuthContext.jsx'
 
 export default function Settings() {
-  const { settings, updateSettings, syncStatus, syncError } = useApp()
+  const { settings, updateSettings, syncStatus, syncError, clearAllData } = useApp()
   const { user, signOut } = useAuth()
   const [form, setForm] = useState({ ...settings })
   const [saved, setSaved] = useState(false)
@@ -16,9 +16,9 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const handleClearData = () => {
-    localStorage.removeItem('mudra_state')
-    window.location.reload()
+  const handleClearData = async () => {
+    await clearAllData()
+    setClearConfirm(false)
   }
 
   const syncLabel = {
