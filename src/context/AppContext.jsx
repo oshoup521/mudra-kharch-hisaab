@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useState, useRef, useCallback } from 'react'
 import { DEFAULT_CATEGORIES, DEFAULT_TAGS, SAMPLE_TRANSACTIONS } from '../utils/constants.js'
 import { generateId } from '../utils/helpers.js'
 import { supabase } from '../lib/supabase.js'
@@ -230,6 +230,14 @@ function reducer(state, action) {
         activePage: 'dashboard',
       }
 
+    // Pull-to-refresh: replace state but keep current page
+    case 'REFRESH_STATE':
+      return {
+        ...INITIAL_STATE,
+        ...action.payload,
+        activePage: state.activePage,
+      }
+
     // Clear transactions only (keep everything else)
     case 'CLEAR_DATA':
       return {
@@ -352,6 +360,28 @@ export function AppProvider({ children }) {
   const updateSettings = (data) => dispatch({ type: 'UPDATE_SETTINGS', payload: data })
   const setPage = (page) => dispatch({ type: 'SET_PAGE', payload: page })
 
+  const refreshFromCloud = useCallback(async () => {
+    if (!user) return
+    setSyncStatus('syncing')
+    try {
+      const { data, error } = await supabase
+        .from('user_data')
+        .select('data')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (error) throw error
+      if (data?.data) {
+        dispatch({ type: 'REFRESH_STATE', payload: data.data })
+      }
+      setSyncStatus('synced')
+      setSyncError('')
+    } catch (err) {
+      console.error('[Mudra] Refresh error:', err)
+      setSyncStatus('error')
+      setSyncError(err?.message || String(err))
+    }
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const clearAllData = async () => {
     dispatch({ type: 'CLEAR_DATA' })
     if (user) {
@@ -392,6 +422,7 @@ export function AppProvider({ children }) {
     updateSettings,
     setPage,
     clearAllData,
+    refreshFromCloud,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useApp } from './context/AppContext.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import Sidebar from './components/Layout/Sidebar.jsx'
@@ -15,6 +15,7 @@ import Ledger from './components/Ledger/Ledger.jsx'
 import Settings from './components/Settings/Settings.jsx'
 import AddTransactionModal from './components/Transactions/AddTransactionModal.jsx'
 import LoginPage from './components/Auth/LoginPage.jsx'
+import { RefreshCw } from 'lucide-react'
 
 const PAGE_COMPONENTS = {
   dashboard:    Dashboard,
@@ -28,10 +29,69 @@ const PAGE_COMPONENTS = {
   settings:     Settings,
 }
 
+const PULL_THRESHOLD = 65
+
 export default function App() {
-  const { activePage } = useApp()
+  const { activePage, refreshFromCloud } = useApp()
   const { user, loading } = useAuth()
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const mainRef = useRef(null)
+  const [pullDistance, setPullDistance] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const refreshingRef = useRef(false)
+  const pullDistanceRef = useRef(0)
+
+  // Keep refs in sync with state for use inside event listeners
+  useEffect(() => { refreshingRef.current = refreshing }, [refreshing])
+  useEffect(() => { pullDistanceRef.current = pullDistance }, [pullDistance])
+
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    let startY = 0
+    let active = false
+
+    const onTouchStart = (e) => {
+      if (el.scrollTop === 0) {
+        startY = e.touches[0].clientY
+        active = true
+      }
+    }
+
+    const onTouchMove = (e) => {
+      if (!active || refreshingRef.current) return
+      const delta = e.touches[0].clientY - startY
+      if (delta > 0) {
+        // Resist overscroll with sqrt-like damping
+        setPullDistance(Math.min(Math.sqrt(delta) * 5, PULL_THRESHOLD + 30))
+        e.preventDefault()
+      } else {
+        active = false
+        setPullDistance(0)
+      }
+    }
+
+    const onTouchEnd = async () => {
+      if (!active) return
+      active = false
+      const dist = pullDistanceRef.current
+      setPullDistance(0)
+      if (dist >= PULL_THRESHOLD && !refreshingRef.current) {
+        setRefreshing(true)
+        await refreshFromCloud()
+        setRefreshing(false)
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [refreshFromCloud])
 
   if (loading) {
     return (
@@ -63,7 +123,24 @@ export default function App() {
         <Header onAddTransaction={() => setAddModalOpen(true)} />
 
         {/* Scrollable content — bottom padding clears the mobile bottom nav */}
-        <main className="flex-1 overflow-y-auto main-content">
+        <main ref={mainRef} className="flex-1 overflow-y-auto main-content">
+          {/* Pull-to-refresh indicator */}
+          <div
+            className="flex flex-col items-center justify-end overflow-hidden transition-[height] duration-200 ease-out"
+            style={{ height: refreshing ? 52 : pullDistance > 8 ? Math.min(pullDistance * 0.75, 52) : 0 }}
+          >
+            <div className="pb-2">
+              <RefreshCw
+                size={20}
+                className={`text-orange-500 transition-transform ${
+                  refreshing ? 'animate-spin' : ''
+                }`}
+                style={{
+                  transform: refreshing ? undefined : `rotate(${Math.min(pullDistance / (PULL_THRESHOLD + 30) * 360, 360)}deg)`,
+                }}
+              />
+            </div>
+          </div>
           <PageComponent />
         </main>
       </div>
