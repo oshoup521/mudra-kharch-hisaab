@@ -230,17 +230,11 @@ function reducer(state, action) {
         activePage: 'dashboard',
       }
 
-    // Clear all user data (keep categories/tags/settings)
+    // Clear transactions only (keep everything else)
     case 'CLEAR_DATA':
       return {
-        ...INITIAL_STATE,
-        categories: state.categories,
-        tags: state.tags,
-        settings: state.settings,
+        ...state,
         transactions: [],
-        scheduled: [],
-        ledger: [],
-        budgets: { overall: 0, categories: {} },
         activePage: 'dashboard',
       }
 
@@ -360,21 +354,13 @@ export function AppProvider({ children }) {
 
   const clearAllData = async () => {
     dispatch({ type: 'CLEAR_DATA' })
-    localStorage.removeItem('mudra_state')
     if (user) {
       try {
-        const clearedState = {
-          transactions: [],
-          scheduled: [],
-          ledger: [],
-          budgets: { overall: 0, categories: {} },
-          categories: DEFAULT_CATEGORIES,
-          tags: DEFAULT_TAGS,
-          settings: state.settings,
-        }
+        // Build cloud payload from current state, only clearing transactions
+        const { activePage, ...persistState } = state
         await supabase.from('user_data').upsert({
           user_id: user.id,
-          data: clearedState,
+          data: { ...persistState, transactions: [] },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' })
       } catch (err) {

@@ -146,8 +146,8 @@ export default function Settings() {
           >
             <Trash2 size={16} className="text-red-500" />
             <div>
-              <p className="font-semibold text-red-700 text-sm">Clear All Data</p>
-              <p className="text-red-400 text-xs">Reset local data (does not delete cloud data)</p>
+              <p className="font-semibold text-red-700 text-sm">Clear All Transactions</p>
+              <p className="text-red-400 text-xs">Permanently deletes all transactions (local + cloud)</p>
             </div>
           </button>
         </div>
@@ -169,9 +169,9 @@ export default function Settings() {
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setClearConfirm(false)} />
           <div className="relative bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-scale-in">
             <p className="text-4xl text-center mb-3">⚠️</p>
-            <h3 className="font-bold text-gray-900 text-center text-lg mb-2">Clear Local Data?</h3>
+            <h3 className="font-bold text-gray-900 text-center text-lg mb-2">Clear All Transactions?</h3>
             <p className="text-gray-500 text-sm text-center mb-5">
-              This resets the app locally. Your cloud data in Supabase is unaffected and will re-sync on next load.
+              This permanently deletes all your transactions from both local storage and Supabase cloud. Categories, budgets, and settings will not be affected.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setClearConfirm(false)} className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600 font-semibold">Cancel</button>
