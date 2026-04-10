@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full bleed background for maskable -->
+  <rect width="512" height="512" fill="#4f46e5"/>
+  <!-- Rupee symbol, slightly smaller to respect safe zone -->
+  <text x="256" y="350" font-family="Arial, sans-serif" font-size="260" font-weight="bold" fill="white" text-anchor="middle">₹</text>
+</svg>
